@@ -1,26 +1,69 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* 🔹 1. Enable manual dark mode via class (for your React toggle button) */
+@custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* 🔹 2. Setup all custom colors and animations inside Tailwind v4 theme */
+@theme {
+  --color-background-light: #F9FAFB;
+  --color-background-dark: #05050A;
+  /* Deep space black */
+  --color-primary: #6366F1;
+  /* Indigo */
+  --color-accent: #06B6D4;
+  /* Cyan */
+  --color-text-light: #1F2937;
+  --color-text-dark: #F3F4F6;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Custom Animations for Navbar */
+  --animate-ticker: ticker 30s linear infinite;
+  --animate-fade-in-up: fadeInUp 0.3s ease-out forwards;
+
+  @keyframes ticker {
+    0% {
+      transform: translateX(0%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
+/* 🔹 3. Base Variables for Light Mode */
+:root {
+  --background: var(--color-background-light);
+  --foreground: var(--color-text-light);
+}
+
+/* 🔹 4. Variables when Dark Mode Toggle is ON */
+:root.dark {
+  --background: var(--color-background-dark);
+  --foreground: var(--color-text-dark);
+}
+
+/* 🔹 5. Apply to Body smoothly */
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Glassmorphism gradient background effect for your alert bar */
+.mask-linear-fade {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }

@@ -1,5 +1,5 @@
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-YOUR-LINK-HERE/pub?output=csv";
-const DEV_URL = "http://192.168.1.13:8080/api/v1";
+const DEV_URL = "http://192.168.1.14:8080/api/v1";
 
 // Deploy karne se pehle isko 'false' kar dena
 const USE_LOCAL_SERVER = true;

@@ -99,6 +99,7 @@ export default function Navbar() {
     const handleLogout = async () => {
         await logoutUser()
         setDropdownOpen(false)
+        setIsMobileMenuOpen(false) // Close mobile menu on logout
         setUser(null)
         router.push("/login")
     }
@@ -274,26 +275,52 @@ export default function Navbar() {
                 </div>
 
                 {/* MOBILE MENU */}
-                <div className={`lg:hidden absolute top-full left-0 w-full bg-white dark:bg-[#05050A] border-b border-slate-200 dark:border-white/10 shadow-2xl transition-all duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"}`}>
+                <div className={`lg:hidden absolute top-full left-0 w-full bg-white dark:bg-[#05050A] border-b border-slate-200 dark:border-white/10 shadow-2xl transition-all duration-300 ease-in-out ${isMobileMenuOpen ? "max-h-[calc(100vh-70px)] opacity-100 overflow-y-auto" : "max-h-0 opacity-0 overflow-hidden"}`}>
                     <div className="flex flex-col p-6 gap-4">
+                        {/* Dynamic Navigation Links */}
                         {navLinks.map((item) => (
                             <Link key={item.name} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`text-lg font-medium transition py-2 border-b border-slate-100 dark:border-white/5 ${item.special ? "text-primary font-bold" : "text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-white"}`}>
                                 {item.name}
                             </Link>
                         ))}
-                        <div className="flex items-center justify-between mt-4">
+
+                        {/* Dark Mode Toggle */}
+                        <div className="flex items-center justify-between mt-2">
                             <span className="text-slate-500 dark:text-slate-400 font-medium">Dark Mode</span>
                             <button onClick={toggleDarkMode} className="p-3 bg-slate-100 dark:bg-white/10 rounded-full">
                                 {darkMode ? <FaSun className="text-yellow-400" /> : <FaMoon />}
                             </button>
                         </div>
 
+                        {/* Mobile Auth/Profile Actions */}
                         {loading ? (
                             <div className="w-full h-12 bg-slate-200 dark:bg-white/10 animate-pulse rounded-xl mt-2"></div>
                         ) : isAuthenticated ? (
-                            <button onClick={handleLogout} className="bg-red-500/10 text-red-500 border border-red-500/20 py-3 rounded-xl font-bold mt-4 flex items-center justify-center gap-2">
-                                <MdLogout size={20} /> Logout
-                            </button>
+                            <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-white/5 pt-4 mt-2">
+                                {/* Display User Details on Mobile */}
+                                <div className="flex items-center gap-3 px-2 py-2 mb-2">
+                                    <img src={user?.profileImage || "https://i.pravatar.cc/150"} alt="Profile" className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" />
+                                    <div>
+                                        <p className="text-base font-bold text-slate-900 dark:text-white">{user?.fullName}</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">{user?.email}</p>
+                                    </div>
+                                </div>
+
+                                {/* Profile & Dashboard Links for Mobile */}
+                                <Link href={displayRole === "Recruiter" ? "/recruiter/dashboard" : "/dashboard"} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
+                                    <MdDashboard size={20} className="text-slate-400" /> Dashboard
+                                </Link>
+                                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
+                                    <MdPerson size={20} className="text-slate-400" /> My Profile
+                                </Link>
+                                <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
+                                    <MdSettings size={20} className="text-slate-400" /> Account Settings
+                                </Link>
+
+                                <button onClick={handleLogout} className="bg-red-500/10 text-red-500 border border-red-500/20 py-3 rounded-xl font-bold mt-2 flex items-center justify-center gap-2 transition hover:bg-red-500/20">
+                                    <MdLogout size={20} /> Logout
+                                </button>
+                            </div>
                         ) : (
                             <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="bg-primary text-white py-3 rounded-xl font-bold text-center mt-4">
                                 Login

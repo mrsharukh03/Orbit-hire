@@ -13,26 +13,24 @@ import {
 import { BsBuilding, BsStars } from 'react-icons/bs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+// Updated to match your OpenAPI JobPostDTO & Saved Jobs wrapper
 interface SavedJob {
     id: number
     title: string
     companyName: string
-    companyLogoUrl?: string
     location: string
-    type: string
-    category?: string
     minSalary?: number
     maxSalary?: number
     experienceRequired?: string
-    description?: string
     status: string
+    savedAt?: string
+    type: string
+    category?: string
+    description?: string
     lastDateToApply?: string
     featured?: boolean
     requiredSkills?: { id: number; name: string }[]
 }
-
-// The saved-jobs endpoint may return a paged object or a list directly.
-// We handle both cases.
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const JOB_TYPE_LABELS: Record<string, string> = {
@@ -41,6 +39,7 @@ const JOB_TYPE_LABELS: Record<string, string> = {
     INTERNSHIP: 'Internship',
     REMOTE: 'Remote',
 }
+
 const JOB_TYPE_COLORS: Record<string, string> = {
     FULL_TIME: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20',
     PART_TIME: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20',
@@ -81,10 +80,26 @@ export default function SavedJobsPage() {
         setError('')
         try {
             const raw = await getSavedJobs()
-            // Backend may return paged or array
-            const list: SavedJob[] = Array.isArray(raw)
-                ? raw
-                : raw?.content ?? raw?.jobs ?? []
+
+            // FIXED: Properly mapping all fields from JobPostDTO / SavedJob wrapper
+            const list: SavedJob[] = (Array.isArray(raw) ? raw : raw?.content ?? []).map((j: any) => ({
+                id: j.jobId || j.id,
+                title: j.title || j.jobTitle,
+                companyName: j.companyName,
+                location: j.location,
+                minSalary: j.minSalary,
+                maxSalary: j.maxSalary,
+                experienceRequired: j.experienceRequired,
+                status: j.status || j.jobStatus,
+                type: j.type || 'FULL_TIME', // Falls back only if backend missing type
+                category: j.category,
+                description: j.description,
+                lastDateToApply: j.lastDateToApply,
+                featured: j.featured || false,
+                requiredSkills: j.requiredSkills || [],
+                savedAt: j.savedAt
+            }))
+
             setJobs(list)
             if (list.length > 0 && !selectedJob) setSelectedJob(list[0])
         } catch (err: any) {
@@ -92,7 +107,7 @@ export default function SavedJobsPage() {
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [selectedJob])
 
     useEffect(() => { fetchSaved() }, [fetchSaved])
 
@@ -101,6 +116,7 @@ export default function SavedJobsPage() {
         e?.stopPropagation()
         setUnsaving(jobId)
         try {
+            // Matches: DELETE /api/v1/saved-jobs/unsave?jobId={jobId}
             await unsaveJob(jobId)
             setJobs(prev => prev.filter(j => j.id !== jobId))
             if (selectedJob?.id === jobId) {
@@ -108,7 +124,7 @@ export default function SavedJobsPage() {
                 setSelectedJob(remaining[0] ?? null)
             }
         } catch (err: any) {
-            // silent — user can retry
+            // silent — user can retry, or you can add a toast here
         } finally {
             setUnsaving(null)
         }
@@ -120,6 +136,7 @@ export default function SavedJobsPage() {
         setApplying(true)
         setApplyError('')
         try {
+            // Matches: POST /api/v1/seeker/job/{jobId}/apply
             await apiFetch(`/seeker/job/${selectedJob.id}/apply`, { method: 'POST' })
             setApplySuccess(true)
         } catch (err: any) {
@@ -149,10 +166,7 @@ export default function SavedJobsPage() {
     // ─── Render ──────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pt-20 pb-16">
-            {/* Ambient */}
-            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px]
-                bg-gradient-to-r from-blue-500/8 via-violet-500/8 to-emerald-500/8
-                rounded-full blur-[140px] pointer-events-none z-0" />
+            <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-r from-blue-500/8 via-violet-500/8 to-emerald-500/8 rounded-full blur-[140px] pointer-events-none z-0" />
 
             <div className="container mx-auto px-4 relative z-10 max-w-[1300px]">
 
@@ -160,8 +174,7 @@ export default function SavedJobsPage() {
                 <div className="pt-8 pb-6 flex flex-col md:flex-row md:items-end gap-4 justify-between">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
-                            <Link href="/dashboard"
-                                className="text-xs font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 flex items-center gap-1 transition-colors">
+                            <Link href="/dashboard" className="text-xs font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 flex items-center gap-1 transition-colors">
                                 <FiArrowLeft size={12} /> Dashboard
                             </Link>
                         </div>
@@ -173,12 +186,10 @@ export default function SavedJobsPage() {
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={fetchSaved}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-blue-400 hover:text-blue-600 transition-all">
+                        <button onClick={fetchSaved} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:border-blue-400 hover:text-blue-600 transition-all">
                             <FiRefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                         </button>
-                        <Link href="/jobs"
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-violet-600 shadow-md shadow-blue-600/20 transition-all active:scale-95">
+                        <Link href="/jobs" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-violet-600 shadow-md shadow-blue-600/20 transition-all active:scale-95">
                             <FiSearch size={14} /> Browse More
                         </Link>
                     </div>
@@ -215,7 +226,6 @@ export default function SavedJobsPage() {
 
                     {/* ── LEFT List ───────────────────────────────────────── */}
                     <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0">
-
                         {/* Filter Row */}
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-3 mb-4 space-y-3 shadow-sm">
                             <div className="flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700 focus-within:border-blue-400 transition-all">
@@ -330,10 +340,8 @@ function SavedJobCard({ job, selected, unsaving, onClick, onUnsave }: {
                     : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-300 dark:hover:border-blue-500/30 hover:shadow-md'
                 }`}>
 
-            {/* Selected bar */}
             {selected && <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-gradient-to-b from-blue-500 to-violet-500 rounded-r-full" />}
 
-            {/* Featured badge */}
             {job.featured && (
                 <div className="absolute top-3 right-12 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-200 dark:border-amber-500/20">
                     <FiStar size={10} className="fill-current" /> Featured
@@ -364,7 +372,6 @@ function SavedJobCard({ job, selected, unsaving, onClick, onUnsave }: {
                     </div>
                 </div>
 
-                {/* Unsave button */}
                 <button onClick={onUnsave} disabled={unsaving}
                     className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-xl text-blue-500 bg-blue-50 dark:bg-blue-500/10 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 border border-blue-100 dark:border-blue-500/20 transition-all">
                     {unsaving ? <FiLoader size={13} className="animate-spin" /> : <FiBookmark size={13} className="fill-current" />}
@@ -394,7 +401,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-            {/* Header */}
             <div className="relative p-6 pb-5 border-b border-zinc-100 dark:border-zinc-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-violet-50 dark:from-blue-500/5 dark:to-violet-500/5" />
                 <div className="relative flex items-start gap-4">
@@ -429,7 +435,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                 </div>
             </div>
 
-            {/* Stats row */}
             <div className="grid grid-cols-3 divide-x divide-zinc-100 dark:divide-zinc-800 border-b border-zinc-100 dark:border-zinc-800">
                 {[
                     { icon: <FiDollarSign />, label: 'Salary', value: salary || 'Not Disclosed' },
@@ -445,7 +450,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
             </div>
 
             <div className="p-6 space-y-5">
-                {/* Expired warning */}
                 {deadlinePassed && (
                     <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm font-semibold">
                         <FiAlertCircle className="shrink-0" />
@@ -453,7 +457,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                     </div>
                 )}
 
-                {/* Apply outcomes */}
                 {applySuccess && (
                     <div className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                         <FiCheckCircle className="text-xl shrink-0" />
@@ -469,7 +472,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                     </div>
                 )}
 
-                {/* Skills */}
                 {job.requiredSkills && job.requiredSkills.length > 0 && (
                     <div>
                         <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -485,7 +487,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                     </div>
                 )}
 
-                {/* Description */}
                 {job.description && (
                     <div>
                         <h4 className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">Job Description</h4>
@@ -493,7 +494,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                     </div>
                 )}
 
-                {/* Category */}
                 {job.category && (
                     <div className="flex items-center gap-2 text-sm">
                         <span className="font-semibold text-zinc-400">Category:</span>
@@ -502,7 +502,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
                 )}
             </div>
 
-            {/* CTA */}
             <div className="px-6 pb-6 space-y-3">
                 <div className="flex gap-3">
                     {applySuccess
@@ -526,7 +525,6 @@ function DetailPanel({ job, applying, applySuccess, applyError, onApply, onUnsav
     )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
 function EmptyDetail() {
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center py-24 px-8 text-center shadow-sm">

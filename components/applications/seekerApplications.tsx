@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getMyApplications, getApplicationById } from '@/services/seekerService'
+import { getMyApplications, getApplicationById } from '@/services/profileService'
 import Link from 'next/link'
 import {
     FiBriefcase, FiClock, FiCheckCircle, FiXCircle,

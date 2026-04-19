@@ -1,5 +1,5 @@
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-YOUR-LINK-HERE/pub?output=csv";
-const DEV_URL = "http://192.168.1.14:8080/api/v1";
+const DEV_URL = "http://localhost:8080/api/v1";
 
 // Deploy karne se pehle isko 'false' kar dena
 const USE_LOCAL_SERVER = true;
@@ -14,7 +14,6 @@ async function getApiBaseUrl(forceRefresh = false): Promise<string> {
     if (!forceRefresh && cachedApiBaseUrl) {
         return cachedApiBaseUrl;
     }
-
     try {
         const response = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
         if (!response.ok) throw new Error("Failed to fetch sheet");
@@ -36,12 +35,16 @@ async function getApiBaseUrl(forceRefresh = false): Promise<string> {
 export async function apiFetch(endpoint: string, options: RequestInit = {}, isRetry = false): Promise<any> {
     const baseUrl = await getApiBaseUrl();
 
+    // Detect multipart signal — don't set Content-Type for file uploads
+    const isMultipart = (options.headers as Record<string, string>)?.["Content-Type"] === "__MULTIPART__";
+
+    const headers: Record<string, string> = isMultipart
+        ? {} // Let browser set multipart/form-data with boundary automatically
+        : { "Content-Type": "application/json", ...(options.headers as Record<string, string> || {}) };
+
     const config: RequestInit = {
         ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...options.headers,
-        },
+        headers,
         credentials: "include",
     };
 

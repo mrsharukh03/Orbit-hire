@@ -11,7 +11,8 @@ import {
 import { BsBuilding, BsStars, BsPersonBadge } from 'react-icons/bs'
 import { getRecruiterDashboard, getPostedJobs } from '@/services/recruiterService'
 import { getMyApplications, getSeekerProfile } from '@/services/profileService'
-import { checkAuth } from '@/services/authService'
+import { useAuth } from '@/context/AuthContext'
+import StatusBadge from '@/components/ui/StatusBadge'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface RecruiterDashboard {
@@ -367,12 +368,7 @@ function SeekerDashboardView() {
 
 // ─── Main Dashboard Page ──────────────────────────────────────────────────────
 export default function DashboardPage() {
-    const [user, setUser] = useState<any>(null)
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        checkAuth().then(u => { setUser(u); setLoading(false) })
-    }, [])
+    const { user, loading } = useAuth()
 
     const isRecruiter = user?.role?.includes('RECRUITER')
     const greeting = (() => {

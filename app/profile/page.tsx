@@ -8,6 +8,7 @@ import { FiLoader, FiUser, FiBriefcase } from "react-icons/fi"
 import SeekerProfile from "@/components/ui/SeekerProfile"
 import RecruiterProfile from "@/components/ui/RecruiterProfile"
 import { assignUserRole } from "@/services/authService"
+import { toast } from "@/components/ui/Toast"
 
 export default function ProfilePage() {
     const { user, loading } = useAuth()
@@ -42,7 +43,7 @@ export default function ProfilePage() {
             // Hard reload taaki naya JWT token aur role update ho jaye
             window.location.reload()
         } catch (error: any) {
-            alert(error.message || "Failed to assign role")
+            toast.error(error.message || 'Failed to assign role')
             setAssigning(false)
         }
     }

@@ -40,3 +40,13 @@ export async function getJobsByCategory(category: string) {
         method: "GET",
     });
 }
+
+/**
+ * GET /api/v1/job/recommends
+ * Personalized recommendations for logged-in seekers (requires auth).
+ */
+export async function getRecommendedJobs() {
+    return apiFetch(`/job/recommends`, {
+        method: "GET",
+    });
+}

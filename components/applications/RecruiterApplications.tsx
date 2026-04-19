@@ -16,6 +16,8 @@ import {
     FiArrowLeft
 } from 'react-icons/fi'
 import { BsBuilding, BsRobot, BsStars } from 'react-icons/bs'
+import StatusBadge from '@/components/ui/StatusBadge'
+import { toast } from '@/components/ui/Toast'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type AppStatus = 'PENDING' | 'SHORTLISTED' | 'INTERVIEW_SCHEDULED' | 'SELECTED' | 'REJECTED'
@@ -144,7 +146,7 @@ export default function RecruiterApplications() {
         setUpdating(true)
         try {
             await updateApplicationStatus(selectedApp.applicationId || selectedApp.id, updateForm)
-            alert("Status Updated Successfully! 🎉")
+            toast.success('Status updated successfully! 🎉')
 
             // Update local states so UI reflects changes immediately without reloading
             setSelectedApp({ ...selectedApp, status: updateForm.status, interviewDate: updateForm.interviewDate })
@@ -153,16 +155,23 @@ export default function RecruiterApplications() {
                     ? { ...a, status: updateForm.status } : a
             ))
         } catch (err: any) {
-            alert(err.message || "Failed to update status")
+            toast.error(err.message || 'Failed to update status')
         } finally {
             setUpdating(false)
         }
     }
 
-    // Search filter
-    const filteredApps = applications.filter(a =>
-        !searchQ.trim() || String(a.applicationId || a.id).includes(searchQ) || a.status.toLowerCase().includes(searchQ.toLowerCase())
-    )
+    // Search filter — now searches by job title and company from applications list
+    const filteredApps = applications.filter(a => {
+        if (!searchQ.trim()) return true
+        const q = searchQ.toLowerCase()
+        return (
+            String(a.applicationId || a.id).includes(q) ||
+            a.status.toLowerCase().includes(q) ||
+            (a.jobTitle && a.jobTitle.toLowerCase().includes(q)) ||
+            (a.companyName && a.companyName.toLowerCase().includes(q))
+        )
+    })
 
     // ─── Render ──────────────────────────────────────────────────────────────
     return (
@@ -251,10 +260,8 @@ export default function RecruiterApplications() {
                                                     Application #{app.applicationId || app.id}
                                                 </h3>
 
-                                                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${meta.bg} ${meta.color} ${meta.border}`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} /> {meta.label}
-                                                    </span>
+                                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                    <StatusBadge status={app.status} />
                                                     {app.aiMatchScore != null && (
                                                         <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-200 dark:border-emerald-500/20">
                                                             <BsStars size={11} /> {app.aiMatchScore}% Match

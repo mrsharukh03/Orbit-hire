@@ -1,5 +1,14 @@
 import { apiFetch } from "./authService";
 
+/*
+ * seekerService.ts
+ * -----------------------------------------------------------------
+ * Contains seeker-SPECIFIC mutations not covered by profileService.
+ * profileService.ts handles READ operations (getSeekerProfile, etc.)
+ * to avoid duplication.
+ * -----------------------------------------------------------------
+ */
+
 /* ================= TYPES ================= */
 
 export interface PersonalDetailDTO {
@@ -60,22 +69,7 @@ export async function applyForJob(jobId: number) {
     return apiFetch(`/seeker/job/${jobId}/apply`, { method: "POST" });
 }
 
-/** GET /api/v1/seeker/applications */
-export async function getSeekerApplications() {
-    return apiFetch(`/seeker/applications`, { method: "GET" });
-}
-
-/** GET /api/v1/seeker/application/{id} */
-export async function getSeekerApplication(id: number) {
-    return apiFetch(`/seeker/application/${id}`, { method: "GET" });
-}
-
-/* ================= PROFILE ================= */
-
-/** GET /api/v1/seeker/current-profile */
-export async function getSeekerProfile() {
-    return apiFetch(`/seeker/current-profile`, { method: "GET" });
-}
+/* ================= PERSONAL DETAILS ================= */
 
 /** PATCH /api/v1/seeker/update/personal-details */
 export async function updatePersonalDetails(data: PersonalDetailDTO) {
@@ -196,36 +190,13 @@ export async function deleteCertification(certificationId: number) {
 
 /* ================= DOCUMENTS ================= */
 
-/** POST /api/v1/seeker/upload-documents (multipart/form-data) */
+/** POST /api/v1/seeker/upload-documents (multipart/form-data)
+ *  NOTE: Do NOT set Content-Type here — browser will auto-set with multipart boundary.
+ */
 export async function uploadDocuments(formData: FormData) {
     return apiFetch(`/seeker/upload-documents`, {
         method: "POST",
         body: formData,
-        headers: {}, // Let browser set Content-Type with boundary
+        headers: { "Content-Type": "__MULTIPART__" }, // Signal to apiFetch to skip JSON header
     });
-}
-
-/* ================= SAVED JOBS ================= */
-
-/** POST /api/v1/saved-jobs/save */
-export async function saveJob(jobId: number) {
-    return apiFetch(`/saved-jobs/save?jobId=${jobId}`, { method: "POST" });
-}
-
-/** DELETE /api/v1/saved-jobs/unsave */
-export async function unsaveJob(jobId: number) {
-    return apiFetch(`/saved-jobs/unsave?jobId=${jobId}`, { method: "DELETE" });
-}
-
-/** GET /api/v1/saved-jobs/saved */
-export async function getSavedJobs() {
-    return apiFetch(`/saved-jobs/saved`, { method: "GET" });
-}
-
-export async function getMyApplications() {
-    return apiFetch(`/seeker/applications`, { method: "GET" });
-}
-
-export async function getApplicationById(id: number) {
-    return apiFetch(`/seeker/application/${id}`, { method: "GET" });
 }

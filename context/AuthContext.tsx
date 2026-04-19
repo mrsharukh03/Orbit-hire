@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { checkAuth } from '@/services/authService';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 // Update this interface based on your UserDto/SeekerFullProfileDTO
 interface User {
@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
-    const pathname = usePathname();
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -50,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
 
         fetchUser();
-    }, [pathname]); // Jab bhi route change hoga, verify karega session active hai ya nahi
+    }, []); // Only run once on mount — not on every route change
 
     return (
         <AuthContext.Provider value={{ user, loading, setUser }}>

@@ -139,7 +139,7 @@ export default function Navbar() {
             )}
 
             {/* 🔹 MAIN NAVBAR */}
-            <nav className={`fixed top-0 left-0 w-full z-40 transition-all duration-300 border-b ${scrolled || isMobileMenuOpen ? "bg-white/80 dark:bg-background-dark/80 backdrop-blur-xl border-slate-200/50 dark:border-white/5 shadow-lg shadow-primary/5 py-3" : "bg-transparent border-transparent py-5"} ${showAlerts ? "mt-9" : "mt-0"}`}>
+            <nav className={`fixed left-0 w-full z-40 transition-all duration-300 border-b ${scrolled || isMobileMenuOpen ? "bg-white/80 dark:bg-background-dark/80 backdrop-blur-xl border-slate-200/50 dark:border-white/5 shadow-lg shadow-primary/5 py-3" : "bg-transparent border-transparent py-5"} ${showAlerts ? "top-9" : "top-0"}`}>
                 <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
 
                     {/* LOGO */}
@@ -246,7 +246,7 @@ export default function Navbar() {
                                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
                                             </div>
 
-                                            <Link href={displayRole === "Recruiter" ? "/recruiter/dashboard" : "/dashboard"} className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-primary transition">
+                                            <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-primary transition">
                                                 <MdDashboard size={18} /> Dashboard
                                             </Link>
                                             <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-primary transition">
@@ -307,7 +307,7 @@ export default function Navbar() {
                                 </div>
 
                                 {/* Profile & Dashboard Links for Mobile */}
-                                <Link href={displayRole === "Recruiter" ? "/recruiter/dashboard" : "/dashboard"} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
+                                <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">
                                     <MdDashboard size={20} className="text-slate-400" /> Dashboard
                                 </Link>
                                 <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 py-3 px-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition">

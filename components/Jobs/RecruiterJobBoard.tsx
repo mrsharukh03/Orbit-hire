@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import JobCard, { type Job } from '@/components/Jobs/JobCard'
-import { getPostedJobs, deleteJob } from '@/services/recruiterService'
+import { getPostedJobs } from '@/services/recruiterService'
+import { deleteJob } from '@/services/jobService'
+import { toast } from '@/components/ui/Toast'
 import {
     FiLoader, FiAlertCircle, FiPlus, FiEye, FiTrash2,
     FiUsers, FiChevronLeft, FiChevronRight, FiEdit2, FiBriefcase
@@ -24,7 +26,6 @@ export default function RecruiterJobBoard() {
     const [page, setPage] = useState(0)
     const [totalPages, setTotalPages] = useState(0)
     const [deletingId, setDeletingId] = useState<number | null>(null)
-    const [successMsg, setSuccessMsg] = useState('')
 
     const loadJobs = async (p = 0) => {
         try {
@@ -47,16 +48,14 @@ export default function RecruiterJobBoard() {
     }, [])
 
     const handleDelete = async (jobId: number) => {
-        if (!confirm('Are you sure you want to delete this job posting?')) return
+        if (!window.confirm('Are you sure you want to delete this job posting?')) return
         try {
             setDeletingId(jobId)
             await deleteJob(jobId)
             setJobs(prev => prev.filter(j => j.id !== jobId))
-            setSuccessMsg('Job posting deleted successfully')
-            setTimeout(() => setSuccessMsg(''), 3000)
+            toast.success('Job posting deleted successfully')
         } catch (err: any) {
-            setError(err.message || 'Failed to delete job')
-            setTimeout(() => setError(''), 4000)
+            toast.error(err.message || 'Failed to delete job')
         } finally {
             setDeletingId(null)
         }
@@ -112,12 +111,6 @@ export default function RecruiterJobBoard() {
             {/* Content */}
             <div className="max-w-5xl mx-auto">
                 {/* Messages */}
-                {successMsg && (
-                    <div className="flex items-center gap-3 p-4 mb-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400 text-sm animate-[fadeInUp_0.2s_ease-out]">
-                        <FiEye className="shrink-0" size={18} />
-                        <span>{successMsg}</span>
-                    </div>
-                )}
                 {error && (
                     <div className="flex items-center gap-3 p-4 mb-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-400 text-sm">
                         <FiAlertCircle className="shrink-0" size={18} />

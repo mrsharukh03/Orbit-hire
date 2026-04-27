@@ -204,6 +204,51 @@ function JobDetailPanel({
                     </div>
                 )}
 
+                {/* ── Premium AI Match Locked Banner ──────────────────────── */}
+                <div className="relative rounded-2xl overflow-hidden border border-violet-200/60 dark:border-violet-700/30">
+                    {/* Blurred fake preview */}
+                    <div className="p-4 space-y-3 blur-[3px] select-none pointer-events-none" aria-hidden="true">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 rounded-full bg-violet-400" />
+                            <span className="text-xs font-bold text-violet-500 uppercase tracking-widest">AI Match Analysis</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+                                <p className="text-2xl font-black text-emerald-600">72%</p>
+                                <p className="text-[10px] text-zinc-500 font-semibold">Profile Match</p>
+                            </div>
+                            <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 p-3 text-center">
+                                <p className="text-2xl font-black text-blue-600">85%</p>
+                                <p className="text-[10px] text-zinc-500 font-semibold">Acceptance Rate</p>
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full w-4/5" />
+                            <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full w-3/5" />
+                            <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full w-5/6" />
+                        </div>
+                    </div>
+
+                    {/* Overlay CTA */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-[1px]">
+                        <div className="text-center px-6">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-violet-500/30">
+                                <FiCheckCircle className="text-white text-xl" />
+                            </div>
+                            <p className="font-extrabold text-zinc-900 dark:text-white text-sm mb-1">Unlock AI Match Analysis</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed max-w-[200px] mx-auto">
+                                See how well your profile matches this job — with tips to boost your chances.
+                            </p>
+                            <button
+                                onClick={onLoginToApply}
+                                className="flex items-center gap-2 mx-auto px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 shadow-lg shadow-violet-600/30 transition-all active:scale-95"
+                            >
+                                <FiExternalLink size={13} /> Sign in to See Your Match
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Description */}
                 {job.description && (
                     <div>

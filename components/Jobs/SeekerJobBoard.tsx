@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import SearchBar, { type SearchBarFilters } from '@/components/ui/SearchBar'
-import { searchJobs, getJobById, getRecommendedJobs } from '@/services/publicService'
+import { searchJobs, getAiJobMatch, getRecommendedJobs } from '@/services/publicService'
 import { applyForJob } from '@/services/seekerService'
 import { saveJob, unsaveJob } from '@/services/profileService'
 import { toast } from '@/components/ui/Toast'
@@ -11,9 +11,10 @@ import {
     FiLoader, FiBriefcase, FiBookmark, FiSend,
     FiCheck, FiTrendingUp, FiChevronLeft, FiChevronRight, FiHeart,
     FiMapPin, FiDollarSign, FiCalendar, FiClock, FiTag, FiX,
-    FiAlertCircle, FiStar, FiZap, FiArrowRight,
+    FiAlertCircle, FiStar, FiZap, FiArrowRight, FiTarget,
+    FiAlertTriangle, FiThumbsUp, FiMessageSquare, FiTool,
 } from 'react-icons/fi'
-import { BsStars, BsRobot } from 'react-icons/bs'
+import { BsStars, BsRobot, BsLightningChargeFill, BsShieldCheck } from 'react-icons/bs'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Job {
@@ -32,6 +33,16 @@ interface Job {
     aiMatchScore?: number
 }
 
+interface AiJobMatchResult {
+    matchPercentage: number
+    acceptanceProbability: number
+    jobSummary?: string
+    skillGaps?: string[]
+    thingsToFix?: string[]
+    strengthHighlights?: string[]
+    interviewTips?: string[]
+}
+
 interface JobDetail extends Job {
     description?: string
     category?: string
@@ -40,6 +51,7 @@ interface JobDetail extends Job {
     lastDateToApply?: string
     priorityScore?: number
     active?: boolean
+    aiJobMatchResult?: AiJobMatchResult | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -67,6 +79,13 @@ const TYPE_COLORS: Record<string, string> = {
     REMOTE: 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-500/20',
 }
 
+function getMatchColor(pct: number) {
+    if (pct >= 80) return { ring: 'from-emerald-400 to-teal-400', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20', label: 'Excellent Match 🎯' }
+    if (pct >= 60) return { ring: 'from-blue-400 to-violet-400', text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', label: 'Good Match 👍' }
+    if (pct >= 40) return { ring: 'from-amber-400 to-orange-400', text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', label: 'Moderate Match' }
+    return { ring: 'from-red-400 to-rose-400', text: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20', label: 'Low Match' }
+}
+
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function DetailSkeleton() {
     return (
@@ -88,6 +107,157 @@ function DetailSkeleton() {
                     <div key={i} className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded-lg" style={{ width: `${w}%` }} />
                 ))}
             </div>
+        </div>
+    )
+}
+
+// ─── AI Match Score Ring ──────────────────────────────────────────────────────
+function ScoreRing({ value, size = 80, strokeWidth = 7, gradient }: { value: number; size?: number; strokeWidth?: number; gradient: string }) {
+    const r = (size - strokeWidth * 2) / 2
+    const circ = 2 * Math.PI * r
+    const offset = circ - (value / 100) * circ
+    const id = `ring-${gradient.replace(/\s/g, '')}`
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+            <defs>
+                <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={gradient.includes('emerald') ? '#34d399' : gradient.includes('blue') ? '#60a5fa' : gradient.includes('amber') ? '#fbbf24' : '#f87171'} />
+                    <stop offset="100%" stopColor={gradient.includes('teal') ? '#14b8a6' : gradient.includes('violet') ? '#a78bfa' : gradient.includes('orange') ? '#fb923c' : '#fb7185'} />
+                </linearGradient>
+            </defs>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={strokeWidth} className="text-zinc-100 dark:text-zinc-800" />
+            <circle
+                cx={size / 2} cy={size / 2} r={r} fill="none"
+                stroke={`url(#${id})`} strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={circ} strokeDashoffset={offset}
+                style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)' }}
+            />
+        </svg>
+    )
+}
+
+// ─── Premium AI Match Panel ───────────────────────────────────────────────────
+function AiMatchPanel({ ai }: { ai: AiJobMatchResult }) {
+    const mc = getMatchColor(ai.matchPercentage)
+    const ap = getMatchColor(ai.acceptanceProbability)
+
+    return (
+        <div className="space-y-4">
+            {/* Score cards */}
+            <div className="grid grid-cols-2 gap-3">
+                {/* Match % */}
+                <div className={`relative overflow-hidden rounded-2xl p-4 border ${mc.bg} border-transparent`} style={{ background: 'linear-gradient(135deg, var(--tw-gradient-stops))', boxShadow: '0 0 0 1px rgba(99,102,241,0.1)' }}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${mc.ring} opacity-5 rounded-2xl`} />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Profile Match</p>
+                            <p className={`text-3xl font-black ${mc.text} leading-none`}>{ai.matchPercentage}%</p>
+                            <p className="text-[10px] font-semibold text-zinc-500 mt-1">{mc.label}</p>
+                        </div>
+                        <div className="relative shrink-0">
+                            <ScoreRing value={ai.matchPercentage} size={60} strokeWidth={5} gradient={mc.ring} />
+                            <span className={`absolute inset-0 flex items-center justify-center text-xs font-black ${mc.text}`} style={{ fontSize: '10px' }}>
+                                {ai.matchPercentage}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {/* Acceptance % */}
+                <div className={`relative overflow-hidden rounded-2xl p-4 ${ap.bg}`} style={{ boxShadow: '0 0 0 1px rgba(99,102,241,0.1)' }}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${ap.ring} opacity-5 rounded-2xl`} />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-1">Acceptance</p>
+                            <p className={`text-3xl font-black ${ap.text} leading-none`}>{ai.acceptanceProbability}%</p>
+                            <p className="text-[10px] font-semibold text-zinc-500 mt-1">Probability</p>
+                        </div>
+                        <div className="relative shrink-0">
+                            <ScoreRing value={ai.acceptanceProbability} size={60} strokeWidth={5} gradient={ap.ring} />
+                            <span className={`absolute inset-0 flex items-center justify-center text-xs font-black ${ap.text}`} style={{ fontSize: '10px' }}>
+                                {ai.acceptanceProbability}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Job Summary */}
+            {ai.jobSummary && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-blue-50 dark:from-violet-900/10 dark:to-blue-900/10 border border-violet-100 dark:border-violet-800/20">
+                    <p className="flex items-center gap-2 text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-widest mb-2">
+                        <BsRobot size={12} /> AI Summary
+                    </p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">{ai.jobSummary}</p>
+                </div>
+            )}
+
+            {/* Strength Highlights */}
+            {ai.strengthHighlights && ai.strengthHighlights.length > 0 && (
+                <div>
+                    <p className="flex items-center gap-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">
+                        <FiThumbsUp size={11} /> Your Strengths
+                    </p>
+                    <div className="space-y-2">
+                        {ai.strengthHighlights.map((s, i) => (
+                            <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/20">
+                                <FiCheck size={13} className="text-emerald-500 shrink-0 mt-0.5" />
+                                <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{s}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Skill Gaps */}
+            {ai.skillGaps && ai.skillGaps.length > 0 && (
+                <div>
+                    <p className="flex items-center gap-2 text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2">
+                        <FiAlertTriangle size={11} /> Skill Gaps
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {ai.skillGaps.map((g, i) => (
+                            <span key={i} className="px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/30">
+                                {g}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Things to Fix */}
+            {ai.thingsToFix && ai.thingsToFix.length > 0 && (
+                <div>
+                    <p className="flex items-center gap-2 text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-2">
+                        <FiTool size={11} /> Improve Your Application
+                    </p>
+                    <div className="space-y-2">
+                        {ai.thingsToFix.map((t, i) => (
+                            <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/20">
+                                <FiArrowRight size={12} className="text-rose-400 shrink-0 mt-0.5" />
+                                <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{t}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Interview Tips */}
+            {ai.interviewTips && ai.interviewTips.length > 0 && (
+                <div>
+                    <p className="flex items-center gap-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">
+                        <FiMessageSquare size={11} /> Interview Tips
+                    </p>
+                    <div className="space-y-2">
+                        {ai.interviewTips.map((tip, i) => (
+                            <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/20">
+                                <BsLightningChargeFill size={11} className="text-blue-400 shrink-0 mt-0.5" />
+                                <p className="text-xs text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed">{tip}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
@@ -116,7 +286,7 @@ function JobDetailPanel({
                 <FiBriefcase className="text-4xl text-blue-300 dark:text-blue-500/50" />
             </div>
             <h3 className="text-lg font-bold text-zinc-700 dark:text-zinc-300 mb-2">Select a Job</h3>
-            <p className="text-sm text-zinc-400 max-w-xs">Click any job from the list to view full details and apply directly.</p>
+            <p className="text-sm text-zinc-400 max-w-xs">Click any job from the list to view full details and your personalized AI match.</p>
         </div>
     )
 
@@ -125,6 +295,8 @@ function JobDetailPanel({
     const posted = formatDate(job.postedDate)
     const deadlinePassed = job.lastDateToApply && new Date(job.lastDateToApply) < new Date()
     const typeColor = TYPE_COLORS[job.type] || 'bg-zinc-100 text-zinc-600 border-zinc-200'
+    const ai = job.aiJobMatchResult
+    const mc = ai ? getMatchColor(ai.matchPercentage) : null
 
     return (
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
@@ -160,9 +332,9 @@ function JobDetailPanel({
                                         <FiStar size={10} className="fill-current" /> Featured
                                     </span>
                                 )}
-                                {job.aiMatchScore != null && (
-                                    <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-500/20">
-                                        <BsStars size={11} /> {job.aiMatchScore}% match
+                                {ai && (
+                                    <span className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-full border ${mc?.bg} ${mc?.text} border-current/20`}>
+                                        <BsStars size={11} /> {ai.matchPercentage}% match
                                     </span>
                                 )}
                             </div>
@@ -216,24 +388,23 @@ function JobDetailPanel({
                     )}
                 </div>
 
-                {/* AI Match Banner */}
-                {job.aiMatchScore != null && (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-500/5 dark:to-blue-500/5 border border-emerald-100 dark:border-emerald-500/10">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
-                            <BsRobot className="text-xl" />
+                {/* ─── AI Match Result ────────────────────────────────────── */}
+                {ai ? (
+                    <div>
+                        {/* Header badge */}
+                        <div className="flex items-center gap-3 mb-4 px-1">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 text-white text-[11px] font-bold shadow-lg shadow-violet-500/25">
+                                <BsStars size={12} /> AI Match Analysis
+                            </div>
+                            <div className="flex-1 h-px bg-gradient-to-r from-violet-200 to-transparent dark:from-violet-800/40" />
                         </div>
-                        <div>
-                            <p className="font-bold text-sm text-zinc-800 dark:text-zinc-100">
-                                {job.aiMatchScore}% Profile Match
-                            </p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                                {job.aiMatchScore >= 80
-                                    ? 'Excellent match — apply now!'
-                                    : job.aiMatchScore >= 60
-                                        ? 'Good match — you meet most requirements.'
-                                        : 'Moderate match — consider upskilling.'}
-                            </p>
-                        </div>
+                        <AiMatchPanel ai={ai} />
+                    </div>
+                ) : (
+                    /* AI loading shimmer — happens when result is being computed */
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-blue-50 dark:from-violet-900/10 dark:to-blue-900/10 border border-violet-100 dark:border-violet-800/20 text-center">
+                        <FiLoader className="animate-spin text-violet-500 mx-auto mb-2" size={18} />
+                        <p className="text-xs font-semibold text-violet-600 dark:text-violet-400">AI is analyzing this job for you…</p>
                     </div>
                 )}
 
@@ -380,13 +551,14 @@ export default function SeekerJobBoard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // ── Fetch single job detail ───────────────────────────────────────────────
+    // ── Fetch single job detail (AI match endpoint for logged-in seekers) ─────
     const handleSelectJob = async (jobId: number) => {
         setDetailLoading(true)
         setMobileDetailOpen(true)
         detailRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
         try {
-            const detail = await getJobById(jobId)
+            // Use the AI-powered endpoint for logged-in seekers
+            const detail = await getAiJobMatch(jobId)
             setSelectedJob(detail)
         } catch {
             setSelectedJob(null)

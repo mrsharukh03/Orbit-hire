@@ -34,6 +34,17 @@ export async function getJobById(id: number) {
     });
 }
 
+/**
+ * GET /api/v1/job/aiJobMatch/:id
+ * Authenticated endpoint – returns full job detail WITH AI match analysis.
+ * Only call this when user is logged in as SEEKER.
+ */
+export async function getAiJobMatch(id: number) {
+    return apiFetch(`/job/aiJobMatch/${id}`, {
+        method: "GET",
+    });
+}
+
 /** GET /api/v1/public/jobs/:category */
 export async function getJobsByCategory(category: string) {
     return apiFetch(`/public/jobs/${encodeURIComponent(category)}`, {
